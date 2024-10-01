@@ -57,13 +57,18 @@ public class FontSettingsModSystem : ModSystem {
 	static private ICoreAPI? _api;
 	static private GuiCompositeSettings? _guiCompositeSettings;
 	static private MethodBase? _onInterfaceOptions;
+	public static ImGuiCompat? ImGuiCompat { get; set; }
 
 	public string HarmonyId => Mod.Info.ModID;
 
 	public Harmony HarmonyInstance => new(HarmonyId);
 
-	public override void StartClientSide(ICoreClientAPI? api) {
+	public override void StartClientSide(ICoreClientAPI api) {
 		_api = api;
+		if (api.ModLoader.IsModEnabled("vsimgui")) {
+			ImGuiCompat = new();
+			ImGuiCompat.ImGuiFontSync();
+		}
 		HarmonyInstance.Patch(SetupContext,
 			(HarmonyMethod)CairoFontSetupContextPreFixInfo);
 		HarmonyInstance.Patch(AddRichText,
@@ -98,14 +103,14 @@ public class FontSettingsModSystem : ModSystem {
 
 	public static void CairoFontSetupContextPreFix(CairoFont __instance, out string __state) {
 		__state = __instance.Fontname;
-		if (_oldDefaultFontName != GuiStyle.StandardFontName &&
+		if (_oldDefaultFontName != ClientSettings.DefaultFontName &&
 			__instance.Fontname == _oldDefaultFontName) {
-			__instance.Fontname = GuiStyle.StandardFontName;
+			__instance.Fontname = ClientSettings.DefaultFontName;
 		}
 
-		if (_oldDecorativeFontName != GuiStyle.DecorativeFontName &&
+		if (_oldDecorativeFontName != ClientSettings.DecorativeFontName &&
 			__instance.Fontname == _oldDecorativeFontName) {
-			__instance.Fontname = GuiStyle.DecorativeFontName;
+			__instance.Fontname = ClientSettings.DecorativeFontName;
 		}
 	}
 
@@ -141,6 +146,7 @@ public class FontSettingsModSystem : ModSystem {
 					[
 						true
 					]);
+					ImGuiCompat?.ImGuiFontSync();
 				},
 				elementBounds4 = elementBounds2.BelowCopy(fixedDeltaY: 17.0).WithFixedSize(330.0, 30.0),
 				"defaultFontName")
@@ -158,6 +164,7 @@ public class FontSettingsModSystem : ModSystem {
 					[
 						true
 					]);
+					ImGuiCompat?.ImGuiFontSync();
 				},
 				elementBounds4.BelowCopy(fixedDeltaY: 15.0).WithFixedSize(330.0, 30.0),
 				"decorativeFontName");

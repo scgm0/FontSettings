@@ -10,6 +10,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Reference Include="ImGui.NET">
+            <HintPath>../lib/ImGui.NET.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="OpenTK.Graphics">
+            <HintPath>$(VINTAGE_STORY)/Lib/OpenTK.Graphics.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
         <Reference Include="VintagestoryAPI">
             <HintPath>$(VINTAGE_STORY)/VintagestoryAPI.dll</HintPath>
             <Private>false</Private>
