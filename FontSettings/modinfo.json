@@ -1,0 +1,14 @@
+{
+    "type": "code",
+    "modid": "fontsettings",
+    "name": "字体设置",
+    "authors": [
+        "神麤詭末"
+    ],
+    "description": "允许为游戏选择已安装的字体。",
+    "side": "client",
+    "version": "1.0.0",
+    "dependencies": {
+        "game": "1.19.8"
+    }
+}
