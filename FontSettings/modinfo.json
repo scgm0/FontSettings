@@ -5,7 +5,7 @@
     "authors": [
         "神麤詭末"
     ],
-    "description": "允许为游戏选择已安装的字体。",
+    "description": "允许为游戏选择已安装的字体，兼容vsimgui。",
     "side": "client",
     "version": "1.0.0",
     "dependencies": {
