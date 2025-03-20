@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using ImGuiNET;
 using OpenTK.Graphics.OpenGL;
+using SixLabors.Fonts;
 using Vintagestory.Client.NoObf;
 
 namespace FontSettings;
@@ -9,15 +10,16 @@ namespace FontSettings;
 public class ImGuiCompat {
 
 	public unsafe void ImGuiFontSync() {
-		if (!FontSettingsModSystem.GetFontFamily(ClientSettings.DefaultFontName).TryGetPaths(out var paths)) return;
-		var io = ImGui.GetIO();
-		var f = io.Fonts.AddFontFromFileTTF(filename: paths.First(),
-			ImGui.GetFontSize(),
-			font_cfg: null,
-			glyph_ranges: io.Fonts.GetGlyphRangesChineseFull());
-		io.NativePtr->FontDefault = f.NativePtr;
-		io.Fonts.Build();
-		RecreateFontDeviceTexture();
+		if (SystemFonts.TryGet(ClientSettings.DefaultFontName, out var family) && family.TryGetPaths(out var paths)) {
+			var io = ImGui.GetIO();
+			var f = io.Fonts.AddFontFromFileTTF(filename: paths.First(),
+				ImGui.GetFontSize(),
+				font_cfg: null,
+				glyph_ranges: io.Fonts.GetGlyphRangesChineseFull());
+			io.NativePtr->FontDefault = f.NativePtr;
+			io.Fonts.Build();
+			RecreateFontDeviceTexture();
+		}
 	}
 
 	public void RecreateFontDeviceTexture() {

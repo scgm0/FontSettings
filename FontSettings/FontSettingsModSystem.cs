@@ -6,6 +6,7 @@ using SixLabors.Fonts;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
+using Vintagestory.API.Util;
 using Vintagestory.Client.NoObf;
 
 namespace FontSettings;
@@ -18,17 +19,9 @@ public class FontSettingsModSystem : ModSystem {
 	static private string _oldDefaultFontName = ClientSettings.DefaultFontName;
 	static private string _oldDecorativeFontName = ClientSettings.DecorativeFontName;
 
-	public static int DefaultFontIndex =>
-		Array.IndexOf(
-			FontNameArray
-				.Select(f => f.ToLower().Replace(" ", "")).ToArray(),
-			ClientSettings.DefaultFontName.ToLower().Replace(" ", ""));
+	public static int DefaultFontIndex => SystemFonts.TryGet(ClientSettings.DefaultFontName, out var family) ? SystemFonts.Families.IndexOf(f => f == family) : 0;
 
-	public static int DecorativeFontIndex =>
-		Array.IndexOf(
-			FontNameArray
-				.Select(f => f.ToLower().Replace(" ", "")).ToArray(),
-			ClientSettings.DecorativeFontName.ToLower().Replace(" ", ""));
+	public static int DecorativeFontIndex => SystemFonts.TryGet(ClientSettings.DecorativeFontName, out var family) ? SystemFonts.Families.IndexOf(f => f == family) : 0;
 
 	static private readonly MethodInfo GuiCompositeSettingsOnInterfaceOptions =
 		AccessTools.Method(typeof(GuiCompositeSettings), "OnInterfaceOptions");
@@ -87,11 +80,6 @@ public class FontSettingsModSystem : ModSystem {
 			GuiComposerHelpersAddRichTextPreFixInfo);
 		HarmonyInstance.Unpatch(GuiCompositeSettingsOnInterfaceOptions,
 			GuiCompositeSettingsOnInterfaceOptionsPostFixInfo);
-	}
-
-	public static FontFamily GetFontFamily(string name) {
-		return SystemFonts.Families.FirstOrDefault(family =>
-			family.Name.ToLower().Replace(" ", "") == name.ToLower().Replace(" ", ""));
 	}
 
 	public static void GuiCompositeSettingsOnInterfaceOptionsPostFix(
