@@ -59,7 +59,7 @@ public class FontSettingsModSystem : ModSystem {
 	public override void StartClientSide(ICoreClientAPI api) {
 		_api = api;
 		if (api.ModLoader.IsModEnabled("vsimgui")) {
-			ImGuiCompat = new();
+			ImGuiCompat = new(api);
 			ImGuiCompat.ImGuiFontSync();
 		}
 		HarmonyInstance.Patch(SetupContext,

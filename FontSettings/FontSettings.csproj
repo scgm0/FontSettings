@@ -10,6 +10,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Reference Include="VSImGui">
+            <HintPath>../lib/VSImGui.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
         <Reference Include="ImGui.NET">
             <HintPath>../lib/ImGui.NET.dll</HintPath>
             <Private>false</Private>
