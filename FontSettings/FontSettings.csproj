@@ -10,6 +10,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+       <Reference Include="xSkillGilded">
+            <HintPath>../lib/xSkillGilded.dll</HintPath>
+            <Private>false</Private>
+        </Reference> 
         <Reference Include="VSImGui">
             <HintPath>../lib/VSImGui.dll</HintPath>
             <Private>false</Private>
