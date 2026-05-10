@@ -7,7 +7,7 @@
     ],
     "description": "允许为游戏选择已安装的字体，兼容vsimgui。",
     "side": "client",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "dependencies": {
         "game": "1.22.2"
     }
