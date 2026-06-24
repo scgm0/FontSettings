@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 using SixLabors.Fonts;
@@ -30,7 +31,7 @@ public class FontSettingsModSystem : ModSystem {
 			: 0;
 
 	internal static GuiCompositeSettings? _guiCompositeSettings;
-	internal static System.Reflection.MethodBase? _onInterfaceOptions;
+	internal static MethodBase? _onInterfaceOptions;
 
 	public static ICoreClientAPI? CoreClientApi { get; private set; }
 
@@ -161,7 +162,7 @@ public static class GuiCompositeSettings_OnInterfaceOptions_Patch {
 	}
 
 	[HarmonyPostfix]
-	public static void Postfix(GuiCompositeSettings __instance, System.Reflection.MethodBase __originalMethod) {
+	public static void Postfix(GuiCompositeSettings __instance, MethodBase __originalMethod) {
 		FontSettingsModSystem._guiCompositeSettings = __instance;
 		FontSettingsModSystem._onInterfaceOptions = __originalMethod;
 	}

@@ -13,9 +13,30 @@ namespace FontSettings;
 public static class ImGuiCompat {
 
 	[UnsafeAccessor(UnsafeAccessorKind.StaticField, Name = "GlyphRanges")]
-	static private extern ref Dictionary<string, IntPtr> GetGlyphRanges([UnsafeAccessorType("VSImGui.API.FontManager, VSImGui")] object? manager);
+	static private extern ref Dictionary<string, IntPtr> GetGlyphRanges(
+		[UnsafeAccessorType("VSImGui.API.FontManager, VSImGui")]
+		object? manager);
+
+	[UnsafeAccessor(UnsafeAccessorKind.StaticMethod, Name = "get_Loaded")]
+	static private extern Dictionary<(string, int), ImFontPtr> GetLoaded(
+		[UnsafeAccessorType("VSImGui.API.FontManager, VSImGui")]
+		object? manager);
 
 	public static readonly Dictionary<string, IntPtr> GlyphRanges = GetGlyphRanges(null);
+	public static readonly Dictionary<(string, int), ImFontPtr> Loaded = GetLoaded(null);
+
+	static public readonly int[] Sizes = [
+		6,
+		8,
+		10,
+		14,
+		18,
+		24,
+		30,
+		36,
+		48,
+		60
+	];
 
 	static ImGuiCompat() {
 		GlyphRanges["zh-tw"] = ImGui.GetIO().Fonts.GetGlyphRangesChineseFull();
@@ -30,27 +51,33 @@ public static class ImGuiCompat {
 		}
 
 		var vsi = FontSettingsModSystem.CoreClientApi!.ModLoader.GetModSystem("VSImGui.ImGuiModSystem") as ImGuiModSystem;
-		vsi!.DefaultStyle!.FontName = ClientSettings.DefaultFontName;
-
 		var ranges = GlyphRanges.GetValueOrDefault(Lang.CurrentLocale, ImGui.GetIO().Fonts.GetGlyphRangesDefault());
 		var io = ImGui.GetIO();
 		var atlas = io.Fonts;
-		var defaultFont = atlas.AddFontFromFileTTF(paths.First(),
-			ImGui.GetFontSize(),
+		var fontPath = paths.First();
+		var defaultFont = atlas.AddFontFromFileTTF(fontPath,
+			vsi?.DefaultStyle?.FontSize ?? 18,
 			font_cfg: new(),
 			glyph_ranges: ranges);
+		Loaded.TryAdd((ClientSettings.DefaultFontName, vsi?.DefaultStyle?.FontSize ?? 18), defaultFont);
 		unsafe {
 			io.NativePtr->FontDefault = defaultFont.NativePtr;
 		}
 
+		foreach (var size in Sizes) {
+			var imFontPtr = atlas.AddFontFromFileTTF(fontPath, size, new(), ranges);
+			Loaded.TryAdd((ClientSettings.DefaultFontName, size), imFontPtr);
+		}
+
 		io.Fonts.Build();
 		RecreateFontDeviceTexture();
+		vsi?.DefaultStyle?.FontName = ClientSettings.DefaultFontName;
 	}
 
 	public static void RecreateFontDeviceTexture() {
 		var io = ImGui.GetIO();
 		io.Fonts.GetTexDataAsRGBA32(out IntPtr outPixels, out var outWidth, out var outHeight, out var _);
-		var levels = (int)Math.Floor(Math.Log((double)Math.Max(outWidth, outHeight), 2.0));
+		var levels = (int)Math.Floor(Math.Log(Math.Max(outWidth, outHeight), 2.0));
 		var integer1 = GL.GetInteger(GetPName.ActiveTexture);
 		GL.ActiveTexture(TextureUnit.Texture0);
 		var integer2 = GL.GetInteger(GetPName.TextureBinding2D);
