@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
 using HarmonyLib;
 using SixLabors.Fonts;
 using Vintagestory.API.Client;
@@ -40,25 +38,32 @@ public class FontSettingsModSystem : ModSystem {
 	public override double ExecuteOrder() { return double.MinValue; }
 
 	public override void StartPre(ICoreAPI api) {
+		CoreClientApi = api as ICoreClientAPI;
+		if (api.ModLoader.IsModEnabled("vsimgui")) {
+			ImGuiControllerSingletonPatch.Patch(_harmony);
+			api.Logger.Notification("字体设置：已为 vsimgui 补丁字体");
+		}
+
 		if (api.ModLoader.IsModEnabled("xskillsgilded")) {
 			_harmony.PatchCategory("xSkillGilded");
-			api.Logger.Debug("字体设置：已为 xSkillGilded 补丁字体");
+			api.Logger.Notification("字体设置：已为 xSkillGilded 补丁字体");
 		}
+
+		_harmony.PatchAllUncategorized();
 	}
 
 	public override void StartClientSide(ICoreClientAPI api) {
-		CoreClientApi = api;
 		CustomFontCollection.AddSystemFonts();
 		var fontAssets = api.Assets.Origins.SelectMany(o => o.GetAssets("fonts")).ToList();
-		api.Logger.Notification($"字体设置：加载自定义字体 {fontAssets.Count} 个");
+		api.Logger.Notification($"字体设置：加载游戏字体 {fontAssets.Count} 个");
 		foreach (var asset in fontAssets) {
-			api.Logger.Notification($"字体设置：加载自定义字体 {asset.Location.Path}");
+			api.Logger.Notification($"字体设置：加载游戏字体 {asset.Location.Path}");
 			try {
 				using var stream = new MemoryStream(asset.Data);
 				CustomFontCollection.Add(stream);
-				api.Logger.Notification($"字体设置：加载自定义字体 {asset.Location.Path} 成功");
+				api.Logger.Notification($"字体设置：加载游戏字体 {asset.Location.Path} 成功");
 			} catch (Exception ex) {
-				api.Logger.Warning($"字体设置：加载自定义字体 {asset.Location.Path} 失败 - {ex.Message}");
+				api.Logger.Warning($"字体设置：加载游戏字体 {asset.Location.Path} 失败 - {ex.Message}");
 			}
 		}
 
@@ -66,14 +71,15 @@ public class FontSettingsModSystem : ModSystem {
 
 		if (api.ModLoader.IsModEnabled("vsimgui")) {
 			ImGuiCompat.ImGuiFontSync();
-			api.Logger.Notification("字体设置：已为 vsimgui 补丁字体");
 		}
-
-		_harmony.PatchAllUncategorized();
 	}
 
 	public override void Dispose() {
-		_harmony?.UnpatchAll();
+		if (CoreClientApi?.ModLoader.IsModEnabled("vsimgui") is true) {
+			ImGuiControllerSingletonPatch.Unpatch(_harmony);
+		}
+
+		_harmony.UnpatchAll();
 		base.Dispose();
 	}
 
@@ -138,48 +144,5 @@ public class FontSettingsModSystem : ModSystem {
 		composer.GetDropDown("decorativeFontName").listMenu.MaxHeight = 200;
 
 		return composer;
-	}
-}
-
-[HarmonyPatch(typeof(GuiCompositeSettings), "OnInterfaceOptions")]
-public static class GuiCompositeSettings_OnInterfaceOptions_Patch {
-	[HarmonyTranspiler]
-	public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
-		var targetMethod = AccessTools.Method(typeof(GuiComposerHelpers),
-			"AddRichtext",
-			[typeof(GuiComposer), typeof(string), typeof(CairoFont), typeof(ElementBounds), typeof(string)]);
-
-		var replacementMethod =
-			AccessTools.Method(typeof(FontSettingsModSystem), nameof(FontSettingsModSystem.InjectFontSettings));
-
-		foreach (var inst in instructions) {
-			if (inst.Calls(targetMethod)) {
-				yield return new(OpCodes.Call, replacementMethod);
-			} else {
-				yield return inst;
-			}
-		}
-	}
-
-	[HarmonyPostfix]
-	public static void Postfix(GuiCompositeSettings __instance, MethodBase __originalMethod) {
-		FontSettingsModSystem._guiCompositeSettings = __instance;
-		FontSettingsModSystem._onInterfaceOptions = __originalMethod;
-	}
-}
-
-[HarmonyPatch(typeof(CairoFont), "SetupContext")]
-public static class CairoFont_SetupContext_Patch {
-	[HarmonyPrefix]
-	public static void Prefix(CairoFont __instance) {
-		if (FontSettingsModSystem._oldDefaultFontName != ClientSettings.DefaultFontName &&
-			__instance.Fontname == FontSettingsModSystem._oldDefaultFontName) {
-			__instance.Fontname = ClientSettings.DefaultFontName;
-		}
-
-		if (FontSettingsModSystem._oldDecorativeFontName != ClientSettings.DecorativeFontName &&
-			__instance.Fontname == FontSettingsModSystem._oldDecorativeFontName) {
-			__instance.Fontname = ClientSettings.DecorativeFontName;
-		}
 	}
 }

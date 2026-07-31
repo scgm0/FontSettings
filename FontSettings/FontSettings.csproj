@@ -22,6 +22,10 @@
             <HintPath>../lib/ImGui.NET.dll</HintPath>
             <Private>false</Private>
         </Reference>
+        <Reference Include="ImGuiController_OpenTK">
+            <HintPath>../lib/ImGuiController_OpenTK.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
         <Reference Include="OpenTK.Graphics">
             <HintPath>$(VINTAGE_STORY)/Lib/OpenTK.Graphics.dll</HintPath>
             <Private>false</Private>
