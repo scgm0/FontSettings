@@ -38,5 +38,14 @@ public static class LibGuiCompat {
 		foreach (var path in paths) {
 			LoadFont(File.ReadAllBytes(path));
 		}
+
+		if (!FontSettingsModSystem.CustomFontCollection.TryGet(ClientSettings.DecorativeFontName, out family) ||
+			!family.TryGetPaths(out paths)) {
+			return;
+		}
+
+		foreach (var path in paths) {
+			LoadFont(File.ReadAllBytes(path));
+		}
 	}
 }
