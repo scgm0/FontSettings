@@ -10,6 +10,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+       <Reference Include="Gui">
+            <HintPath>../lib/Gui.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+       <Reference Include="SkiaSharp">
+            <HintPath>$(VINTAGE_STORY)/Lib/SkiaSharp.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
        <Reference Include="xSkillGilded">
             <HintPath>../lib/xSkillGilded.dll</HintPath>
             <Private>false</Private>

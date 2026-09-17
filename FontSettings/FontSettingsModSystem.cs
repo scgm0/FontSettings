@@ -18,30 +18,27 @@ public class FontSettingsModSystem : ModSystem {
 	public static string _oldDefaultFontName = ClientSettings.DefaultFontName;
 	public static string _oldDecorativeFontName = ClientSettings.DecorativeFontName;
 
-	public static int DefaultFontIndex =>
-		CustomFontCollection.TryGet(ClientSettings.DefaultFontName, out var family)
-			? CustomFontCollection.Families.ToList().IndexOf(family)
-			: 0;
+	public static int DefaultFontIndex => Math.Max(0, Array.IndexOf(FontNameArray, ClientSettings.DefaultFontName));
 
-	public static int DecorativeFontIndex =>
-		CustomFontCollection.TryGet(ClientSettings.DecorativeFontName, out var family)
-			? CustomFontCollection.Families.ToList().IndexOf(family)
-			: 0;
+	public static int DecorativeFontIndex => Math.Max(0, Array.IndexOf(FontNameArray, ClientSettings.DecorativeFontName));
 
 	internal static GuiCompositeSettings? _guiCompositeSettings;
 	internal static MethodBase? _onInterfaceOptions;
 
 	public static ICoreClientAPI? CoreClientApi { get; private set; }
+	public static bool IsVsImGuiEnabled { get; private set; }
+	public static bool IsFontRunSplitterAvailable { get; private set; }
 
 	private readonly Harmony _harmony = new("fontsettings");
 
-	public override double ExecuteOrder() { return double.MinValue; }
+	public override double ExecuteOrder() => double.MinValue;
 
 	public override void StartPre(ICoreAPI api) {
 		CoreClientApi = api as ICoreClientAPI;
-		if (api.ModLoader.IsModEnabled("vsimgui")) {
-			ImGuiControllerSingletonPatch.Patch(_harmony);
-			api.Logger.Notification("字体设置：已为 vsimgui 补丁字体");
+		IsVsImGuiEnabled = api.ModLoader.IsModEnabled("vsimgui");
+
+		if (IsVsImGuiEnabled) {
+			PatchVsImGuiSafe(api);
 		}
 
 		if (api.ModLoader.IsModEnabled("xskillsgilded")) {
@@ -49,38 +46,82 @@ public class FontSettingsModSystem : ModSystem {
 			api.Logger.Notification("字体设置：已为 xSkillGilded 补丁字体");
 		}
 
+		IsFontRunSplitterAvailable = Type.GetType("Gui.Rendering.Text.FontRunSplitter, Gui") != null;
+		if (IsFontRunSplitterAvailable) {
+			PatchFontRunSplitterSafe(api);
+		}
+
 		_harmony.PatchAllUncategorized();
+	}
+
+	private void PatchVsImGuiSafe(ICoreAPI api) {
+		ImGuiControllerSingletonPatch.Patch(_harmony);
+		api.Logger.Notification("字体设置：已为 vsimgui 补丁字体");
+	}
+
+	private void PatchFontRunSplitterSafe(ICoreAPI api) {
+		_harmony.PatchCategory("gui");
+		api.Logger.Notification("字体设置：已为 LibGui 补丁字体");
 	}
 
 	public override void StartClientSide(ICoreClientAPI api) {
 		CustomFontCollection.AddSystemFonts();
 		var fontAssets = api.Assets.Origins.SelectMany(o => o.GetAssets("fonts")).ToList();
 		api.Logger.Notification($"字体设置：加载游戏字体 {fontAssets.Count} 个");
+
 		foreach (var asset in fontAssets) {
-			api.Logger.Notification($"字体设置：加载游戏字体 {asset.Location.Path}");
 			try {
 				using var stream = new MemoryStream(asset.Data);
 				CustomFontCollection.Add(stream);
+
+				if (IsFontRunSplitterAvailable) {
+					LoadFontRunSplitterSafe(asset.Data);
+				}
+
 				api.Logger.Notification($"字体设置：加载游戏字体 {asset.Location.Path} 成功");
 			} catch (Exception ex) {
 				api.Logger.Warning($"字体设置：加载游戏字体 {asset.Location.Path} 失败 - {ex.Message}");
 			}
 		}
 
-		FontNameArray = CustomFontCollection.Families.Select(f => f.Name).ToArray();
+		FontNameArray = [.. CustomFontCollection.Families.Select(f => f.Name)];
 
-		if (api.ModLoader.IsModEnabled("vsimgui")) {
-			ImGuiCompat.ImGuiFontSync();
+		if (IsVsImGuiEnabled) {
+			SyncVsImGuiFontSafe();
+		}
+
+		if (IsFontRunSplitterAvailable) {
+			SyncFontRunSplitterSafe();
 		}
 	}
 
+	static private void LoadFontRunSplitterSafe(byte[] data) => LibGuiCompat.LoadFont(data);
+
+	static private void SyncVsImGuiFontSafe() => ImGuiCompat.ImGuiFontSync();
+
+	static private void SyncFontRunSplitterSafe() => LibGuiCompat.SyncFont();
+
 	public override void Dispose() {
-		if (CoreClientApi?.ModLoader.IsModEnabled("vsimgui") is true) {
-			ImGuiControllerSingletonPatch.Unpatch(_harmony);
+		if (IsVsImGuiEnabled) {
+			UnpatchVsImGuiSafe();
+		}
+
+		if (IsFontRunSplitterAvailable) {
+			DisposeFontRunSplitterSafe();
 		}
 
 		_harmony.UnpatchAll();
 		base.Dispose();
+	}
+
+	private void UnpatchVsImGuiSafe() => ImGuiControllerSingletonPatch.Unpatch(_harmony);
+
+	static private void DisposeFontRunSplitterSafe() {
+		foreach (var typeface in LibGuiCompat.FastTypefaceArray) {
+			typeface.Dispose();
+		}
+
+		LibGuiCompat.SkiaCustomTypefaces.Clear();
 	}
 
 	public static GuiComposer InjectFontSettings(
@@ -90,15 +131,13 @@ public class FontSettingsModSystem : ModSystem {
 		ElementBounds bounds,
 		string key) {
 		composer.AddRichtext(vtmlCode, baseFont, bounds, key);
-
 		if (key != "restartText") {
 			return composer;
 		}
 
 		var elementBounds1 = ElementBounds.Fixed(0.0, bounds.fixedY, 475.0, 42.0);
 		var elementBounds2 = ElementBounds.Fixed(495.0, bounds.fixedY + 4.0, 200.0, 20.0);
-		ElementBounds elementBounds3;
-		ElementBounds elementBounds4;
+		ElementBounds elementBounds3, elementBounds4;
 
 		composer
 			.AddStaticText(Lang.Get("setting-name-default-font"),
@@ -116,7 +155,14 @@ public class FontSettingsModSystem : ModSystem {
 					_oldDefaultFontName = ClientSettings.DefaultFontName;
 					ClientSettings.DefaultFontName = GuiStyle.StandardFontName = code;
 					_onInterfaceOptions?.Invoke(_guiCompositeSettings, [true]);
-					ImGuiCompat.ImGuiFontSync();
+
+					if (IsVsImGuiEnabled) {
+						SyncVsImGuiFontSafe();
+					}
+
+					if (IsFontRunSplitterAvailable) {
+						SyncFontRunSplitterSafe();
+					}
 				},
 				elementBounds4 = elementBounds2.BelowCopy(fixedDeltaY: 17.0).WithFixedSize(330.0, 30.0),
 				"defaultFontName")
@@ -135,7 +181,14 @@ public class FontSettingsModSystem : ModSystem {
 					_oldDecorativeFontName = ClientSettings.DecorativeFontName;
 					ClientSettings.DecorativeFontName = GuiStyle.DecorativeFontName = code;
 					_onInterfaceOptions?.Invoke(_guiCompositeSettings, [true]);
-					ImGuiCompat.ImGuiFontSync();
+
+					if (IsVsImGuiEnabled) {
+						SyncVsImGuiFontSafe();
+					}
+
+					if (IsFontRunSplitterAvailable) {
+						SyncFontRunSplitterSafe();
+					}
 				},
 				elementBounds4.BelowCopy(fixedDeltaY: 15.0).WithFixedSize(330.0, 30.0),
 				"decorativeFontName");
