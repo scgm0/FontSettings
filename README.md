@@ -5,3 +5,5 @@
 兼容[vsimgui](https://mods.vintagestory.at/imgui)，会同步设置`imgui`的字体为默认字体
 
 兼容[libGui](https://mods.vintagestory.at/libgui)，会同步将默认字体与装饰字体添加到`SkiaSharp`的字体回退中
+
+兼容[immersivemaps](https://mods.vintagestory.at/immersivemaps)，地图标点名称的字体会使用装饰字体
