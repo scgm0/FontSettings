@@ -51,6 +51,11 @@ public class FontSettingsModSystem : ModSystem {
 			PatchFontRunSplitterSafe(api);
 		}
 
+		if (api.ModLoader.IsModEnabled("immersivemaps") || Type.GetType("ImmersiveMaps.Rendering.WaypointGlyphCache") != null) {
+			_harmony.PatchCategory("immersivemaps");
+			api.Logger.Notification("字体设置：已为 ImmersiveMaps 补丁字体");
+		}
+
 		_harmony.PatchAllUncategorized();
 	}
 

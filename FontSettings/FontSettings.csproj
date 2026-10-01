@@ -10,6 +10,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+       <Reference Include="ImmersiveMaps">
+            <HintPath>../lib/ImmersiveMaps.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
        <Reference Include="Gui">
             <HintPath>../lib/Gui.dll</HintPath>
             <Private>false</Private>
